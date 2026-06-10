@@ -1,0 +1,6 @@
+﻿WORKSPACE=F:\codex_project1\outputs\manual-20260610-162059\presentations\note-app-product-architecture
+SLIDES_DIR=F:\codex_project1\outputs\manual-20260610-162059\presentations\note-app-product-architecture\slides
+PREVIEW_DIR=F:\codex_project1\outputs\manual-20260610-162059\presentations\note-app-product-architecture\preview
+OUTPUT_DIR=F:\codex_project1\outputs\manual-20260610-162059\presentations\note-app-product-architecture\output
+QA_DIR=F:\codex_project1\outputs\manual-20260610-162059\presentations\note-app-product-architecture\qa
+SLUG=note-app-product-architecture

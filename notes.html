@@ -1,0 +1,306 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>笔记</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #f5f5f7;
+    --sidebar-bg: #ececee;
+    --sidebar-hover: #e2e2e6;
+    --sidebar-active: #d4d4da;
+    --border: #d1d1d6;
+    --text: #1d1d1f;
+    --text-secondary: #6e6e73;
+    --accent: #0071e3;
+    --accent-hover: #0060c4;
+    --accent-text: #fff;
+    --card-bg: #fff;
+    --shadow: 0 1px 3px rgba(0,0,0,.08);
+    --radius: 8px;
+    --radius-sm: 6px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --header-h: 48px;
+  }
+  html, body { height: 100%; font-family: var(--font); color: var(--text); background: var(--bg); }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+  .app-header {
+    display: flex; align-items: center; justify-content: space-between;
+    height: var(--header-h); padding: 0 16px;
+    background: var(--card-bg); border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .app-header h1 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .app-header .header-actions { display: flex; gap: 8px; }
+  .header-actions button {
+    background: none; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 4px 12px; font-size: 13px; color: var(--text); cursor: pointer;
+    transition: background .15s;
+  }
+  .header-actions button:hover { background: var(--sidebar-hover); }
+  .app-body { display: flex; flex: 1; min-height: 0; }
+  .sidebar {
+    width: 280px; min-width: 200px; flex-shrink: 0;
+    background: var(--sidebar-bg); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .main {
+    flex: 1; display: flex; flex-direction: column; min-width: 0;
+    background: var(--card-bg);
+  }
+  .sidebar-toolbar {
+    padding: 10px 12px; display: flex; gap: 8px; flex-shrink: 0;
+  }
+  .sidebar-toolbar .search-box {
+    flex: 1; position: relative;
+  }
+  .sidebar-toolbar .search-box input {
+    width: 100%; padding: 7px 10px 7px 30px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--card-bg); font-size: 13px; outline: none;
+    transition: border-color .2s;
+  }
+  .sidebar-toolbar .search-box input:focus { border-color: var(--accent); }
+  .sidebar-toolbar .search-box .search-icon {
+    position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+    color: var(--text-secondary); font-size: 14px; pointer-events: none;
+  }
+  .sidebar-toolbar .new-btn {
+    width: 32px; height: 32px; flex-shrink: 0;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--card-bg); color: var(--accent);
+    font-size: 18px; font-weight: 500; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background .15s, border-color .15s;
+  }
+  .sidebar-toolbar .new-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .note-list { flex: 1; overflow-y: auto; padding: 4px 8px 8px; }
+  .note-list .empty-msg {
+    text-align: center; color: var(--text-secondary); font-size: 13px;
+    padding: 40px 16px; line-height: 1.6;
+  }
+  .note-item {
+    padding: 10px 12px; border-radius: var(--radius-sm); cursor: pointer;
+    transition: background .12s; margin-bottom: 2px;
+    border: 1px solid transparent;
+  }
+  .note-item:hover { background: var(--sidebar-hover); }
+  .note-item.active {
+    background: var(--sidebar-active); border-color: var(--border);
+  }
+  .note-item .note-title {
+    font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; margin-bottom: 2px;
+  }
+  .note-item .note-preview {
+    font-size: 12px; color: var(--text-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .note-item .note-meta {
+    font-size: 11px; color: var(--text-secondary); margin-top: 3px;
+    display: flex; justify-content: space-between;
+  }
+  .note-item .delete-btn {
+    background: none; border: none; color: var(--text-secondary); cursor: pointer;
+    font-size: 13px; padding: 0 2px; line-height: 1; opacity: 0;
+    transition: opacity .15s, color .15s;
+  }
+  .note-item:hover .delete-btn { opacity: .6; }
+  .note-item .delete-btn:hover { opacity: 1; color: #e74c3c; }
+  .editor-area { flex: 1; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+  .editor-area .empty-state {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary); font-size: 15px; text-align: center;
+    padding: 40px; line-height: 1.8;
+  }
+  .editor-area .empty-state kbd {
+    display: inline-block; padding: 2px 7px; font-size: 12px;
+    background: var(--sidebar-bg); border: 1px solid var(--border);
+    border-radius: 4px; font-family: inherit;
+  }
+  .editor-header {
+    padding: 20px 24px 12px; border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .editor-header .title-input {
+    width: 100%; font-size: 22px; font-weight: 600; border: none; outline: none;
+    background: transparent; color: var(--text); letter-spacing: -.02em;
+  }
+  .editor-header .title-input::placeholder { color: #b0b0b8; }
+  .editor-body {
+    flex: 1; padding: 16px 24px 24px; overflow-y: auto;
+  }
+  .editor-body .content-area {
+    width: 100%; min-height: 100%; border: none; outline: none; resize: none;
+    font-size: 15px; line-height: 1.7; color: var(--text);
+    background: transparent; font-family: var(--font);
+  }
+  .editor-body .content-area::placeholder { color: #b0b0b8; }
+  .editor-footer {
+    padding: 8px 24px; border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text-secondary); flex-shrink: 0;
+    display: flex; justify-content: space-between;
+  }
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.3);
+    z-index: 100; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--card-bg); border-radius: var(--radius); padding: 24px;
+    max-width: 380px; width: 90%; box-shadow: 0 8px 30px rgba(0,0,0,.15);
+  }
+  .modal-box h3 { font-size: 16px; margin-bottom: 8px; }
+  .modal-box p { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .modal-actions button {
+    padding: 7px 18px; border-radius: var(--radius-sm); font-size: 13px;
+    cursor: pointer; border: 1px solid var(--border); background: var(--card-bg);
+    color: var(--text); transition: background .15s;
+  }
+  .modal-actions button:hover { background: var(--sidebar-hover); }
+  .modal-actions .danger-btn {
+    background: #e74c3c; color: #fff; border-color: #e74c3c;
+  }
+  .modal-actions .danger-btn:hover { background: #c0392b; }
+  .toast-container {
+    position: fixed; bottom: 24px; right: 24px; z-index: 200;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast {
+    padding: 10px 18px; border-radius: var(--radius-sm);
+    background: #323232; color: #fff; font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.2);
+    animation: toast-in .25s ease-out;
+  }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 640px) {
+    .sidebar { width: 100%; max-height: 200px; border-right: none; border-bottom: 1px solid var(--border); }
+    .app-body { flex-direction: column; }
+    .editor-header { padding: 14px 16px 10px; }
+    .editor-body { padding: 12px 16px 16px; }
+    .editor-header .title-input { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<header class="app-header">
+  <h1>?? 笔记</h1>
+  <div class="header-actions">
+    <button id="exportBtn" title="导出所有笔记为 JSON">导出</button>
+    <button id="importBtn" title="从 JSON 导入笔记">导入</button>
+  </div>
+  <input type="file" id="importFileInput" accept=".json" style="display:none">
+</header>
+
+<div class="app-body">
+  <aside class="sidebar">
+    <div class="sidebar-toolbar">
+      <div class="search-box">
+        <span class="search-icon">??</span>
+        <input type="text" id="searchInput" placeholder="搜索笔记..." autocomplete="off">
+      </div>
+      <button class="new-btn" id="newNoteBtn" title="新建笔记 (Ctrl+N)">+</button>
+    </div>
+    <div class="note-list" id="noteList">
+      <div class="empty-msg" id="emptyMsg">
+        还没有笔记<br>点击 <strong>+</strong> 新建第一条
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="editor-area" id="editorArea">
+      <div class="empty-state" id="emptyState">
+        <div>
+          选择左侧笔记，或按 <kbd>Ctrl</kbd>+<kbd>N</kbd> 新建
+        </div>
+      </div>
+      <div class="editor-header" id="editorHeader" style="display:none">
+        <input type="text" class="title-input" id="titleInput" placeholder="无标题">
+      </div>
+      <div class="editor-body" id="editorBody" style="display:none">
+        <textarea class="content-area" id="contentArea" placeholder="开始写点什么..."></textarea>
+      </div>
+      <div class="editor-footer" id="editorFooter" style="display:none">
+        <span id="saveStatus"></span>
+        <span id="charCount"></span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal-box">
+    <h3>删除笔记</h3>
+    <p id="deleteMsg">确定要删除这条笔记吗？此操作不可撤销。</p>
+    <div class="modal-actions">
+      <button id="cancelDeleteBtn">取消</button>
+      <button class="danger-btn" id="confirmDeleteBtn">删除</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script>
+(function(){
+"use strict";
+const STORAGE_KEY='notes_app_data';const SAVE_DELAY=400;
+function genId(){return Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);}
+function createNote(t,c){const n=Date.now();return{id:genId(),title:t||'',content:c||'',createdAt:n,updatedAt:n};}
+function loadNotes(){try{const r=localStorage.getItem(STORAGE_KEY);if(!r)return[];const d=JSON.parse(r);return Array.isArray(d)?d.filter(n=>n&&typeof n.id==='string'):[]}catch{return[];}}
+function saveNotes(n){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(n));return true}catch{return false;}}
+function addNote(notes,n){return[n,...notes];}
+function delNote(notes,i){return notes.filter(n=>n.id!==i);}
+function getNote(notes,i){return notes.find(n=>n.id===i)||null;}
+function updNote(notes,i,p){return notes.map(n=>n.id!==i?n:{...n,...p,updatedAt:Date.now()});}
+function searchNotes(notes,q){if(!q||!q.trim())return notes;const s=q.trim().toLowerCase();return notes.filter(n=>n.title.toLowerCase().includes(s)||n.content.toLowerCase().includes(s));}
+function fmtDate(ts){if(!ts)return '';const d=new Date(ts),now=new Date();const pad=n=>String(n).padStart(2,'0');const ds=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());const t=pad(d.getHours())+':'+pad(d.getMinutes());if(ds===now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate()))return t;return ds+' '+t;}
+function truncate(str,len){if(!str)return '空笔记';return str.length>len?str.slice(0,len)+'…':str;}
+function exportJSON(notes){return JSON.stringify(notes,null,2);}
+function importJSON(str){try{const d=JSON.parse(str);if(!Array.isArray(d))throw new Error('数据不是数组格式');return{ok:true,notes:d.filter(n=>n&&typeof n.id==='string')};}catch(e){return{ok:false,error:e.message};}}
+let notes=[],activeId=null,saveTimer=null,searchQuery='',pendingDel=null;
+const $=id=>document.getElementById(id);
+const noteListEl=$('noteList'),emptyMsgEl=$('emptyMsg'),searchInput=$('searchInput');
+const newNoteBtn=$('newNoteBtn'),editorArea=$('editorArea'),emptyState=$('emptyState');
+const editorHeader=$('editorHeader'),editorBody=$('editorBody'),editorFooter=$('editorFooter');
+const titleInput=$('titleInput'),contentArea=$('contentArea');
+const saveStatusEl=$('saveStatus'),charCountEl=$('charCount');
+const deleteModal=$('deleteModal'),deleteMsg=$('deleteMsg');
+const confirmDeleteBtn=$('confirmDeleteBtn'),cancelDeleteBtn=$('cancelDeleteBtn');
+const exportBtn=$('exportBtn'),importBtn=$('importBtn'),importFileInput=$('importFileInput');
+const toastContainer=$('toastContainer');
+function render(){renderList();renderEditor();}
+function renderList(){const filtered=searchNotes(notes,searchQuery);noteListEl.innerHTML='';if(filtered.length===0){emptyMsgEl.style.display='block';emptyMsgEl.innerHTML=searchQuery.trim()?'没有匹配的笔记':'还没有笔记<br>点击 <strong>+</strong> 新建第一条';return;}emptyMsgEl.style.display='none';filtered.forEach(n=>{const item=document.createElement('div');item.className='note-item'+(n.id===activeId?' active':'');item.dataset.id=n.id;const t=document.createElement('div');t.className='note-title';t.textContent=n.title||'无标题';const p=document.createElement('div');p.className='note-preview';p.textContent=truncate(n.content.replace(/\s+/g,' ').trim(),60);const m=document.createElement('div');m.className='note-meta';const tm=document.createElement('span');tm.textContent=fmtDate(n.updatedAt);const db=document.createElement('button');db.className='delete-btn';db.textContent='?';db.title='删除';db.addEventListener('click',e=>{e.stopPropagation();promptDel(n.id,n.title);});m.appendChild(tm);m.appendChild(db);item.appendChild(t);item.appendChild(p);item.appendChild(m);item.addEventListener('click',()=>selectNote(n.id));noteListEl.appendChild(item);});}
+function renderEditor(){const note=activeId?getNote(notes,activeId):null;emptyState.style.display=note?'none':'flex';editorHeader.style.display=note?'block':'none';editorBody.style.display=note?'block':'none';editorFooter.style.display=note?'flex':'none';if(!note){titleInput.value='';contentArea.value='';saveStatusEl.textContent='';charCountEl.textContent='';return;}if(document.activeElement!==titleInput)titleInput.value=note.title;if(document.activeElement!==contentArea)contentArea.value=note.content;charCountEl.textContent=note.content.length+' 字';saveStatusEl.textContent='已保存';}
+function selectNote(id){if(saveTimer)flushSave();activeId=id;render();}
+function handleNew(){if(saveTimer)flushSave();const note=createNote('','');notes=addNote(notes,note);saveNotes(notes);activeId=note.id;render();titleInput.focus();toast('已创建新笔记');}
+function onTitleChange(){notes=updNote(notes,activeId,{title:titleInput.value});schedSave();}
+function onContentChange(){notes=updNote(notes,activeId,{content:contentArea.value});charCountEl.textContent=contentArea.value.length+' 字';saveStatusEl.textContent='未保存…';schedSave();}
+function schedSave(){if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(flushSave,SAVE_DELAY);}
+function flushSave(){if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}if(!activeId)return;const note=getNote(notes,activeId);if(!note)return;note.title=titleInput.value;note.content=contentArea.value;note.updatedAt=Date.now();notes=updNote(notes,activeId,{title:note.title,content:note.content});saveNotes(notes);saveStatusEl.textContent='已保存';renderList();}
+function promptDel(id,hint){pendingDel=id;deleteMsg.textContent='确定要删除「'+(hint||'无标题')+'」吗？此操作不可撤销。';deleteModal.classList.add('open');}
+function handleDel(){if(!pendingDel)return;const was=pendingDel===activeId;notes=delNote(notes,pendingDel);saveNotes(notes);if(was)activeId=notes.length>0?notes[0].id:null;pendingDel=null;deleteModal.classList.remove('open');render();toast('笔记已删除');}
+function handleExport(){const blob=new Blob([exportJSON(notes)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='notes-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(url);toast('笔记已导出');}
+function handleImport(){importFileInput.click();}
+function handleImportFile(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(ev){const r=importJSON(ev.target.result);if(!r.ok){toast('导入失败：'+r.error);return;}if(r.notes.length===0){toast('文件中没有有效笔记');return;}const ids=new Set(notes.map(n=>n.id));let added=0;r.notes.forEach(n=>{if(!ids.has(n.id)){notes.push(n);added++;}});if(added>0){notes.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));saveNotes(notes);render();toast('已导入 '+added+' 条笔记');}else{toast('没有新笔记可导入');}};reader.readAsText(file);e.target.value='';}
+function toast(msg){const el=document.createElement('div');el.className='toast';el.textContent=msg;toastContainer.appendChild(el);setTimeout(()=>{if(el.parentNode)el.parentNode.removeChild(el);},2500);}
+newNoteBtn.addEventListener('click',handleNew);
+searchInput.addEventListener('input',function(){searchQuery=this.value;if(activeId){const filtered=searchNotes(notes,searchQuery);if(!filtered.some(n=>n.id===activeId))activeId=null;}render();});
+titleInput.addEventListener('input',onTitleChange);
+contentArea.addEventListener('input',onContentChange);
+confirmDeleteBtn.addEventListener('click',handleDel);
+cancelDeleteBtn.addEventListener('click',function(){pendingDel=null;deleteModal.classList.remove('open');});
+deleteModal.addEventListener('click',function(e){if(e.target===deleteModal){pendingDel=null;deleteModal.classList.remove('open');}});
+exportBtn.addEventListener('click',handleExport);
+importBtn.addEventListener('click',handleImport);
+importFileInput.addEventListener('change',handleImportFile);
+document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key==='n'){e.preventDefault();handleNew();}if(e.key==='Escape'&&deleteModal.classList.contains('open')){pendingDel=null;deleteModal.classList.remove('open');}if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();if(saveTimer)flushSave();else toast('已保存');}});
+notes=loadNotes();if(notes.length>0)activeId=notes[0].id;render();
+window.__notes={createNote,loadNotes,saveNotes,addNote,delNote,updNote,getNote,searchNotes,fmtDate,truncate,exportJSON,importJSON,genId,getState:()=>({notes:[...notes],activeId}),setState:(n,a)=>{notes=n;activeId=a;render();},handleNew,handleDel,toast,flushSave,schedSave,};
+})();
+</script>
+</body>
+</html>

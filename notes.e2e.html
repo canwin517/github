@@ -1,0 +1,217 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>笔记应用 - 测试报告</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; background:#f5f5f7; color:#1d1d1f; padding:24px; }
+  h1 { font-size:20px; margin-bottom:16px; }
+  .summary { padding:16px; background:#fff; border-radius:8px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .summary .count { font-size:24px; font-weight:700; }
+  .summary .count.pass { color:#1a8c3a; }
+  .summary .count.fail { color:#e74c3c; }
+  .group { background:#fff; border-radius:8px; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,.08); overflow:hidden; }
+  .group h2 { font-size:14px; padding:10px 14px; background:#fafafa; border-bottom:1px solid #eee; }
+  .group h2 .badge { font-size:11px; padding:2px 8px; border-radius:10px; margin-left:8px; }
+  .group h2 .badge.pass { background:#d4edda; color:#155724; }
+  .group h2 .badge.fail { background:#f8d7da; color:#721c24; }
+  .test-row { padding:6px 14px; font-size:13px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; gap:8px; }
+  .test-row:last-child { border-bottom:none; }
+  .test-row .icon { font-size:14px; }
+  .test-row.pass .icon { color:#1a8c3a; }
+  .test-row.fail .icon { color:#e74c3c; }
+  .test-row.detail { color:#6e6e73; font-size:12px; padding-left:36px; }
+  .run-btn { padding:10px 24px; background:#0071e3; color:#fff; border:none; border-radius:6px; font-size:14px; cursor:pointer; }
+  .run-btn:hover { background:#0060c4; }
+  #status { margin-top:12px; font-size:13px; color:#6e6e73; }
+</style>
+</head>
+<body>
+<h1>📝 笔记应用 — 测试报告</h1>
+<div class="summary">
+  <div style="display:flex;gap:32px;">
+    <div><span class="count pass" id="passCount">0</span> 通过</div>
+    <div><span class="count fail" id="failCount">0</span> 失败</div>
+    <div><span id="totalTests">0</span> 总计</div>
+  </div>
+  <div id="status" style="margin-top:8px;">就绪 — 点击按钮运行测试</div>
+  <button class="run-btn" id="runBtn" style="margin-top:12px;">▶ 运行所有测试</button>
+</div>
+<div id="results"></div>
+
+<script>
+// ── Import data layer from main app ──
+(function(){
+  // Data layer (copied from notes.html)
+  function genId(){return Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,7);}
+  function createNote(t,c){const n=Date.now();return{id:genId(),title:t||"",content:c||"",createdAt:n,updatedAt:n};}
+  function addNote(notes,n){return[n,...notes];}
+  function delNote(notes,i){return notes.filter(n=>n.id!==i);}
+  function getNote(notes,i){return notes.find(n=>n.id===i)||null;}
+  function updNote(notes,i,p){return notes.map(n=>n.id!==i?n:{...n,...p,updatedAt:Date.now()});}
+  function searchNotes(notes,q){if(!q||!q.trim())return notes;const s=q.trim().toLowerCase();return notes.filter(n=>n.title.toLowerCase().includes(s)||n.content.toLowerCase().includes(s));}
+  function fmtDate(ts){if(!ts)return"";const d=new Date(ts),now=new Date();const pad=n=>String(n).padStart(2,"0");const ds=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());const t2=pad(d.getHours())+":"+pad(d.getMinutes());if(ds===now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate()))return t2;return ds+" "+t2;}
+  function truncate(str,len){if(!str)return"空笔记";return str.length>len?str.slice(0,len)+"…":str;}
+  function exportJSON(notes){return JSON.stringify(notes,null,2);}
+  function importJSON(str){try{const d=JSON.parse(str);if(!Array.isArray(d))throw new Error("数据不是数组格式");return{ok:true,notes:d.filter(n=>n&&typeof n.id==="string")};}catch(e){return{ok:false,error:e.message};}}
+
+  // ── Test runner ──
+  let totalPass=0,totalFail=0;
+  const resultsEl=document.getElementById("results");
+  const passCount=document.getElementById("passCount");
+  const failCount=document.getElementById("failCount");
+  const totalTests=document.getElementById("totalTests");
+  const statusEl=document.getElementById("status");
+
+  function group(name){
+    const g=document.createElement("div");g.className="group";
+    const h=document.createElement("h2");h.textContent=name;
+    const badge=document.createElement("span");badge.className="badge";
+    h.appendChild(badge);g.appendChild(h);return{g,h,badge};
+  }
+
+  function test(groupEl,msg,ok,detail){
+    const r=document.createElement("div");r.className="test-row "+(ok?"pass":"fail");
+    const icon=document.createElement("span");icon.className="icon";icon.textContent=ok?"✓":"✗";
+    const text=document.createElement("span");text.textContent=msg;
+    r.appendChild(icon);r.appendChild(text);
+    if(detail){const d=document.createElement("div");d.className="test-row detail";d.textContent=detail;groupEl.appendChild(r);groupEl.appendChild(d);return;}
+    groupEl.appendChild(r);
+    if(ok)totalPass++;else totalFail++;
+  }
+
+  function updateSummary(){
+    passCount.textContent=totalPass;failCount.textContent=totalFail;totalTests.textContent=totalPass+totalFail;
+  }
+
+  function runTests(){
+    resultsEl.innerHTML="";totalPass=0;totalFail=0;statusEl.textContent="运行中...";
+    updateSummary();
+
+    // ── Group 1: createNote ──
+    const g1=group("createNote — 创建笔记");
+    resultsEl.appendChild(g1.g);
+    {
+      const n=createNote("测试标题","测试内容");
+      test(g1.g,"title 正确",n.title==="测试标题");
+      test(g1.g,"content 正确",n.content==="测试内容");
+      test(g1.g,"id 生成有效",typeof n.id==="string"&&n.id.length>0);
+      test(g1.g,"createdAt 是数字",typeof n.createdAt==="number"&&n.createdAt>0);
+      test(g1.g,"createdAt === updatedAt",n.createdAt===n.updatedAt);
+    }
+    // More edge cases
+    {
+      const n=createNote("","");
+      test(g1.g,"空 title 留空",n.title==="");
+      test(g1.g,"空 content 留空",n.content==="");
+    }
+    const p1=g1.g.querySelectorAll(".test-row.pass").length;
+    g1.badge.textContent=p1+"/6 通过";g1.badge.className="badge "+(p1===6?"pass":"fail");
+
+    // ── Group 2: addNote / delNote ──
+    const g2=group("addNote / delNote — 增删笔记");
+    resultsEl.appendChild(g2.g);
+    {
+      const n1=createNote("1","a"),n2=createNote("2","b");
+      let notes=addNote([],n1);
+      test(g2.g,"addNote 第一项",notes.length===1);
+      notes=addNote(notes,n2);
+      test(g2.g,"addNote 第二项",notes.length===2);
+      test(g2.g,"最新笔记在前",notes[0].id===n2.id);
+      notes=delNote(notes,n1.id);
+      test(g2.g,"delNote 删除",notes.length===1);
+      test(g2.g,"getNote 无此 id",getNote(notes,n1.id)===null);
+      test(g2.g,"getNote 正确 id",getNote(notes,n2.id).id===n2.id);
+    }
+    const p2=g2.g.querySelectorAll(".test-row.pass").length;
+    g2.badge.textContent=p2+"/6 通过";g2.badge.className="badge "+(p2===6?"pass":"fail");
+
+    // ── Group 3: updNote ──
+    const g3=group("updNote — 更新笔记");
+    resultsEl.appendChild(g3.g);
+    {
+      const n=createNote("原标题","原内容");
+      let notes=[n];
+      notes=updNote(notes,n.id,{title:"新标题",content:"新内容"});
+      const u=getNote(notes,n.id);
+      test(g3.g,"更新标题",u.title==="新标题");
+      test(g3.g,"更新内容",u.content==="新内容");
+      test(g3.g,"updatedAt 刷新",u.updatedAt>=n.updatedAt);
+      test(g3.g,"不影响其他笔记",notes.length===1);
+    }
+    const p3=g3.g.querySelectorAll(".test-row.pass").length;
+    g3.badge.textContent=p3+"/4 通过";g3.badge.className="badge "+(p3===4?"pass":"fail");
+
+    // ── Group 4: searchNotes ──
+    const g4=group("searchNotes — 搜索");
+    resultsEl.appendChild(g4.g);
+    {
+      const a=createNote("JavaScript教程","关于 async/await");
+      const b=createNote("购物清单","牛奶 面包");
+      const c=createNote("Python笔记","列表推导式");
+      const notes=[a,b,c];
+      test(g4.g,"标题匹配",searchNotes(notes,"JavaScript").length===1);
+      test(g4.g,"内容匹配",searchNotes(notes,"async").length===1);
+      test(g4.g,"中文匹配",searchNotes(notes,"牛奶").length===1);
+      test(g4.g,"大小写不敏感",searchNotes(notes,"javascript").length===1);
+      test(g4.g,"无匹配返回空",searchNotes(notes,"不存在").length===0);
+      test(g4.g,"空查询返回全部",searchNotes(notes,"").length===3);
+      test(g4.g,"部分匹配",searchNotes(notes,"笔记").length===2);
+    }
+    const p4=g4.g.querySelectorAll(".test-row.pass").length;
+    g4.badge.textContent=p4+"/7 通过";g4.badge.className="badge "+(p4===7?"pass":"fail");
+
+    // ── Group 5: truncate / export / import ──
+    const g5=group("truncate / export / import — 工具函数");
+    resultsEl.appendChild(g5.g);
+    {
+      test(g5.g,"truncate 截断",truncate("hello",3)==="hel…");
+      test(g5.g,"truncate 短文本不变",truncate("hi",10)==="hi");
+      test(g5.g,"truncate 空字符串",truncate("",5)==="空笔记");
+      test(g5.g,"truncate null",truncate(null,5)==="空笔记");
+
+      const n1=createNote("标题","内容");
+      const json=exportJSON([n1]);
+      test(g5.g,"exportJSON 输出字符串",typeof json==="string");
+
+      const imp=importJSON(json);
+      test(g5.g,"importJSON 成功",imp.ok===true);
+      test(g5.g,"importJSON 数量正确",imp.notes.length===1);
+      test(g5.g,"importJSON 字段保留",imp.notes[0].title==="标题");
+
+      const imp2=importJSON("invalid json");
+      test(g5.g,"importJSON 无效 JSON",imp2.ok===false);
+
+      const imp3=importJSON("{}");
+      test(g5.g,"importJSON 非数组",imp3.ok===false);
+    }
+    const p5=g5.g.querySelectorAll(".test-row.pass").length;
+    g5.badge.textContent=p5+"/11 通过";g5.badge.className="badge "+(p5===11?"pass":"fail");
+
+    // ── Group 6: fmtDate ──
+    const g6=group("fmtDate — 日期格式化");
+    resultsEl.appendChild(g6.g);
+    {
+      test(g6.g,"空时间戳",fmtDate(null)==="");
+      test(g6.g,"undefined",fmtDate(undefined)==="");
+      const d=new Date("2024-01-15T14:30:00");
+      test(g6.g,"过去日期含日期+时间",fmtDate(d.getTime()).includes("2024")&&fmtDate(d.getTime()).includes("14:30"));
+    }
+    const p6=g6.g.querySelectorAll(".test-row.pass").length;
+    g6.badge.textContent=p6+"/3 通过";g6.badge.className="badge "+(p6===3?"pass":"fail");
+
+    updateSummary();
+    const passAll=totalFail===0;
+    statusEl.textContent=passAll?"✓ 全部测试通过！":"✗ 有 "+totalFail+" 项测试失败";
+    statusEl.style.color=passAll?"#1a8c3a":"#e74c3c";
+  }
+
+  document.getElementById("runBtn").addEventListener("click",runTests);
+  // Auto-run on load
+  runTests();
+})();
+</script>
+</body>
+</html>

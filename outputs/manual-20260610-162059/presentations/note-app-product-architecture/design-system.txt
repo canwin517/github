@@ -1,0 +1,38 @@
+﻿## Design System
+
+Slide size: 1280 x 720 (16:9)
+
+### Typography
+- Font family: 'Microsoft YaHei', 'Segoe UI', system-ui, sans-serif
+- Headings: 600 weight, 24-40px range
+  - Cover title: 40px, weight 700
+  - Section header: 32px, weight 600
+  - Slide title: 28px, weight 600
+  - Subtitle: 20px, weight 500
+- Body: 14-18px, weight 400
+- Labels/Captions: 11-12px, weight 400
+- Source/Copyright: 9px, weight 400
+
+### Color Palette
+- Background: #F5F5F7 (light warm gray) — matches the app's own background
+- Surface: #FFFFFF (card/surface)
+- Accent: #0071E3 (blue, matches app's accent color)
+- Accent Dark: #0060C4
+- Text Primary: #1D1D1F
+- Text Secondary: #6E6E73
+- Border: #D1D1D6
+- Success: #1A8C3A (green)
+- Warning: #E74C3C (red, used for delete)
+
+### Spacing
+- Slide padding: 48px top, 48px sides, 36px bottom
+- Content gap: 16px
+- Section spacing: 24px
+
+### Layout Families
+1. Cover: centered vertical, large title + subtitle
+2. Split: left text (40%) + right visual/content (60%)
+3. Full-bleed: content fills most of the slide
+4. Matrix: 2x2 or 3x1 grid of items
+5. Diagram: center architecture/flow diagram with annotations
+6. Code: code block + explanation side-by-side
